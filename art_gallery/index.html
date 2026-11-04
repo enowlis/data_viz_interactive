@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML Lab</title>
+    <style>
+        h1 {
+            display: flex;
+            font-family: ui-sans-serif;
+            font-size: 50px;
+            color: #070053;
+            background-color: #f3f3f3;
+            justify-content: center;
+            align-items: center;
+            height: 100px;
+            margin: 0;
+        }
+
+        /* Inspired by https://www.w3schools.com/css/css_navbar.asp */
+        .navbar {
+            display: flex;
+            justify-content: left;
+            align-items: center;
+            margin: 0;
+            background-color: #f3f3f3;
+        }
+
+        .navbar ul {
+            list-style-type: none;
+            display: flex;
+            margin: 0;
+        }
+
+        .navbar ul li a {
+            display: block;
+            color: black;
+            text-align: center;
+            text-decoration: none;
+            padding: 10pt;
+        }
+
+        .navbar ul li a:hover {
+            background-color: #a4a4a4;
+        }
+
+        body {
+            background-color: #070053;
+        }
+
+        .gallery-section h2 {
+            color: white;
+            font-size: 30pt;
+            padding-left: 5pt;
+            padding-right: 5pt;
+            border-bottom: 1pt dashed white;
+        }
+
+        .gallery-section .gallery-items {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            justify-items: center;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .gallery-item {
+            text-align: center;
+            background-color: #f3f3f3;
+            padding-top: 10pt;
+            border: 1px solid #828282;
+            border-radius: 5px;
+            padding: 1em;
+        }
+
+        .gallery-item a {
+            color: black
+        }
+
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Elie's Art Gallery</h1>
+    </header>
+    <nav class="navbar">
+        <ul>
+            <li><a href="#Birds">Bird Art</a></li>
+            <li><a href="#Drugs">Drug Art</a></li>
+            <li><a href="#Orange">Orange Art</a></li>
+            <li><a href="#Original">Original Art</a></li>
+        </ul>
+    </nav>
+    <main>
+        <div class="gallery-section">
+            <h2 id="Birds">Bird Art</h2>
+            <div class="gallery-items">
+                <div class="gallery-item">
+                    <img src="images/https___collections.nmnh.si.edu_media__irn.jpg"
+                        alt="Agelaius tricolor image"
+                        width="350">
+                    <p><a href="https://www.si.edu/object/agelaius-tricolor:nmnhvz_4440467">Agelaius tricolor</a></p>
+                    <p>Speciman collected on April 23, 2007 by Robert J. Meese in Kern, California.</p>
+                </div>
+                <div class="gallery-item">
+                    <img src="images/https___collections.nmnh.si.edu_media__irn (1).jpg"
+                        alt="Trichastoma bicolor image"
+                        width="350">
+                    <p><a href="https://www.si.edu/object/trichastoma-bicolor:nmnhvz_14502618">Trichastoma bicolor</a></p>
+                    <p>Speciman collected on August 29, 2025 by Florita Gendu anak Luta in Malaysia.</p>
+                </div>
+                <div class="gallery-item">
+                    <img src="images/ark__65665_m3f14de938358044e3b2e7451cdac12459.jpg"
+                        alt="Chrysolophus amherstiae image"
+                        width="350">
+                    <p><a href="https://www.si.edu/object/chrysolophus-amherstiae:nmnhvz_4057732">Chrysolophus amherstiae</a></p>
+                    <p>Speciman collected on May 11, 1923 by J. F. Rock in China.</p>
+                </div>
+            </div>
+        </div>
+        <div class="gallery-section">
+            <h2 id="Drugs">Drug Art</h2>
+            <div class="gallery-items">
+                <div class="gallery-item">
+                    <img src="images/pdia-3b28c214-feee-4f73-afa5-7154a59fa2b7.jpg"
+                        alt="The Effects of Chloroform on the Human Body image"
+                        width="350">
+                    <a href="https://pdimagearchive.org/images/3b28c214-feee-4f73-afa5-7154a59fa2b7/">The Effects of Chloroform on the Human Body</a>
+                    <p>Painting by Richard Tennant Cooper representing the effects of chloroform, 1912.</p>
+                </div>
+                <div class="gallery-item">
+                    <img src="images/pdia-e5e92583-25b6-40e3-9041-ceaf657a38de.jpg"
+                        alt="A Eunuch's Dream image"
+                        width="350">
+                    <a href="https://pdimagearchive.org/images/e5e92583-25b6-40e3-9041-ceaf657a38de/">A Eunuch's Dream</a>
+                    <p>Painting by Jean Lecomte du Nouÿ representing a dream induced by an opium pipe, 1874.</p>
+                </div>
+                <div class="gallery-item">
+                    <img src="images/pdia-c06c3e6c-d8bc-4737-9c2a-443febaa0f0e.jpg"
+                        alt="Ortus sanitatis image"
+                        width="350">
+                    <a href="https://pdimagearchive.org/images/c06c3e6c-d8bc-4737-9c2a-443febaa0f0e/">Ortus sanitatis</a>
+                    <p>Illustration of a Mandrake from the US National Library of Medicine, 1491.</p>
+                </div>
+            </div>
+        </div>
+        <div class="gallery-section">
+            <h2 id="Orange">Orange Art</h2>
+            <div class="gallery-items">
+                <div class="gallery-item">
+                    <img src="images/1999.536.1-5 - Five Cigar Ribbons.jpg"
+                        alt="Five Cigar Ribbons image"
+                        width="350">
+                    <a href="https://www.artic.edu/artworks/153663/five-cigar-ribbons">Five Cigar Ribbons</a>
+                    <p>Silk, plain weave; printed. Gift of Mr. and Mrs. John and Christine Gates. United States, 1880s.</p>
+                </div>
+                <div class="gallery-item">
+                    <img src="images/1931.26 - Program for L'Argent.jpg"
+                        alt="Program for L'Argent image"
+                        width="350">
+                    <a href="https://www.artic.edu/artworks/7588/program-for-l-argent">Program for L'Argent</a>
+                    <p>Color lithograph on cream wove paper. Created by Henri de Toulouse-Lautrec. France, 1895.</p>
+                </div>
+                <div class="gallery-item">
+                    <img src="images/1939.2258.184 - Tetsuwa or Kanawa, from the series _Pictures of No....jpg"
+                        alt="Tetsuwa or Kanawa image"
+                        width="350">
+                    <a href="https://www.artic.edu/artworks/155368/tetsuwa-or-kanawa-from-the-series-pictures-of-no-performances-nogaku-zue">Tetsuwa or Kanawa</a>
+                    <p>Color woodblock print. Created by Tsukioka Kogyo. Japan, 1890s.</p>
+                </div>
+            </div>
+        </div>
+        <div class="gallery-section">
+            <h2 id="Original">Original Art</h2>
+            <div class="gallery-items">
+                <div class="gallery-item">
+                    <svg 
+                        viewBox="0 0 300 300" 
+                        xmlns="http://www.w3.org/2000/svg">
+                            <rect width="50" height="20" x="125" y="270" style="fill:#872107;stroke:#741d07; stroke-width:2" />
+                            <polygon points="150,170 250,280 50,280" style="fill:#065e06;stroke:#217f07;stroke-width:2" />
+                            <polygon points="150,125 225,225 75,225" style="fill:#065e06;stroke:#217f07;stroke-width:2" />
+                            <polygon points="150,50 200,150 100,150" style="fill:#065e06;stroke:#217f07;stroke-width:2" />
+                            <polygon points="150,5 163,38 198,38 170,59 181,93 150,72 119,93 130,59 102,38 137,38" style="fill:gold;stroke:#b89c00; stroke-width:2" />
+                            <circle r="5" cx="125" cy="130" style="fill:#de1515;stroke:#ed2929; stroke-width:1" />
+                            <circle r="5" cx="170" cy="190" style="fill:#de1515;stroke:#ed2929; stroke-width:1" />
+                            <circle r="5" cx="110" cy="260" style="fill:#de1515;stroke:#ed2929; stroke-width:1" />
+                            <circle r="5" cx="190" cy="240" style="fill:#fffdfd;stroke:#ece2e2; stroke-width:1" />
+                            <circle r="5" cx="120" cy="200" style="fill:#fffdfd;stroke:#ece2e2; stroke-width:1" />
+                            <circle r="5" cx="170" cy="115" style="fill:#fffdfd;stroke:#ece2e2; stroke-width:1" />
+                    </svg>
+                    <p>Christmas Tree</p>
+                    <p>SVG. Created by Eliana Nowlis. United States, 2026.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+</body>
+</html>
