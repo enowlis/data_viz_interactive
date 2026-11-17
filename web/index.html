@@ -1,0 +1,256 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      /* style for tooltip as well as the base map container */
+      .tooltip {
+        position: absolute;
+        padding: 8px;
+        background: white;
+        border: 1px solid #333333;
+        border-radius: 4px;
+        pointer-events: none;
+        font-family: sans-serif;
+        font-size: 14px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .container {
+        max-width: 1000px;
+        margin: 0 auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div id="map"></div>
+    </div>
+    <div class="container">
+      <div id="region_bar"></div>
+    </div>
+
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://unpkg.com/topojson@3"></script>
+    <script>
+      const width = 800;
+      const height = 600;
+      const svg = d3
+        .select("#map")
+        .append("svg")
+        .attr("viewBox", [0, 0, width, height])
+        .attr("width", width)
+        .attr("height", height);
+
+      const svg_bar = d3
+        .select("#region_bar")
+        .append("svg")
+        .attr("viewBox", [0, 0, width, height])
+        .attr("width", width)
+        .attr("height", height);
+
+      // d3 tooltip pattern: create a placeholder div which will be
+      // hidden at first & revealed/moved as needed
+      const tooltip = d3
+        .select("body")
+        .append("div")
+        .attr("class", "tooltip")
+        .style("opacity", 0);
+
+      // set up projection
+      const projection = d3
+        .geoNaturalEarth1()
+        .center([-30, 0])
+        .scale(150)
+        .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      let globalData = null;
+
+      // load data
+      Promise.all([
+        d3.json(
+        // DEMO change to 110m/10m
+        "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json",
+        ),
+        d3.json("../data/compiled_tourism_data.json")
+      ]).then(([map_data, value_data]) => {
+        // using topojson 3rd party library to convert to GeoJSON which D3 understands
+        const geojson = topojson.feature(map_data, map_data.objects.countries);
+
+        // Selected indicator and year
+        const selectedIndicator = "EMPL_TOTL_TOTL_TOTL_TOTL_PRSN";
+        const selectedYear = 2019;
+
+        // Filter observations
+        const filteredData = value_data.filter(d =>
+            d.indicator_code === selectedIndicator &&
+            d.year === selectedYear
+        );
+
+        const [minValue, maxValue] = d3.extent(
+            filteredData,
+            d => +d.value
+            );
+
+        // Group values by region and sum them
+        const regionData = Array.from(
+            d3.rollup(
+                filteredData,
+                v => d3.sum(v, d => +d.value),
+                d => d.region
+            ),
+            ([region, total]) => ({
+                region: region,
+                total: total
+            })
+            ).sort((a, b) => b.total - a.total);
+
+        // color function used for choropleth
+        const colorScale = d3
+            .scaleSequential()
+            .domain([minValue, maxValue])
+            .interpolator(d3.interpolateViridis);
+
+        // Create country-value lookup
+        const countryValues = new Map(
+            filteredData.map(d => [
+            d.reporter_area_label,
+            d.value
+            ])
+        );
+
+        geojson.features.forEach(d => {
+        d.properties.value = countryValues.get(d.properties.name);
+        });
+
+        // entire map render happens after data is loaded, in the then() function
+        const countries_data = geojson.features.filter(
+          (d) => d.properties.value !== undefined,
+        );
+
+        console.log(countries_data);
+
+        svg
+          .selectAll("path")
+          .data(countries_data)
+          .join("path")
+          .attr("d", path)
+          .attr("fill", (d) => {
+            const score = d.properties.value;
+            return score != null ? colorScale(score) : "#ccc";
+          })
+          .attr("stroke", "white")
+          .attr("stroke-width", 0.5)
+          .on("mouseover", function (event, d) {
+            tooltip.transition().duration(200).style("opacity", 0.9);
+            tooltip
+              .html(
+                `
+              <strong>${d.properties.name}</strong><br/>
+              ${selectedIndicator}: ${d.properties.value}
+            `,
+              )
+              .style("left", event.pageX + 10 + "px")
+              .style("top", event.pageY - 28 + "px");
+          })
+          .on("mouseout", function () {
+            tooltip.transition().duration(500).style("opacity", 0);
+          });
+
+        // X scale (total values)
+        const xScale = d3
+            .scaleLinear()
+            .domain([0, d3.max(regionData, d => d.total)])
+            .nice()
+            .range([150, width]);
+
+        // Y scale (regions)
+        const yScale = d3
+            .scaleBand()
+            .domain(regionData.map(d => d.region))
+            .range([0, height])
+            .padding(0.2);
+
+        // Draw bars
+        svg_bar
+            .selectAll(".bar")
+            .data(regionData)
+            .join("rect")
+            .attr("class", "bar")
+            .attr("x", xScale(0))
+            .attr("y", d => yScale(d.region))
+            .attr("width", d => xScale(d.total) - xScale(0))
+            .attr("height", yScale.bandwidth());
+
+        // Region labels
+        svg_bar
+            .append("g")
+            .attr("transform", "translate(150, 0)")
+            .call(d3.axisLeft(yScale));
+
+        // Data values
+        svg_bar
+            .selectAll(".bar-label")
+            .data(regionData)
+            .join("text")
+            .attr("class", "bar-label")
+            .attr("x", d => xScale(d.total) + 5)
+            .attr("y", d => yScale(d.region) + yScale.bandwidth() / 2)
+            .attr("dy", "0.35em")
+            .text(d => d3.format(",.0f")(d.total));
+
+        // example of a legend, not related to map topics
+        const legendWidth = 200;
+        const legendHeight = 20;
+        const legendScale = d3
+          .scaleLinear()
+          .domain([minValue, maxValue])
+          .range([0, legendWidth]);
+
+        const legendAxis = d3
+          .axisBottom(legendScale)
+          .ticks(8)
+          .tickFormat((d) => d);
+
+        const legend = svg
+          .append("g")
+          .attr(
+            "transform",
+            `translate(${width - legendWidth - 20}, ${height - 50})`,
+          );
+
+        const defs = svg.append("defs");
+        const gradient = defs
+          .append("linearGradient")
+          .attr("id", "legend-gradient")
+          .attr("x1", "0%")
+          .attr("x2", "100%")
+          .attr("y1", "0%")
+          .attr("y2", "0%");
+
+        // Add gradient stops
+        const stops = d3.range(0, 8);
+
+        stops.forEach((stop, i) => {
+          const value = minValue + (i / 10) * (maxValue - minValue);
+          gradient
+            .append("stop")
+            .attr("offset", `${i * 10}%`)
+            .attr("stop-color", colorScale(value));
+        });
+
+        legend
+          .append("rect")
+          .attr("width", legendWidth)
+          .attr("height", legendHeight)
+          .style("fill", "url(#legend-gradient)");
+
+        legend
+          .append("g")
+          .attr("transform", `translate(0, ${legendHeight})`)
+          .call(legendAxis);
+      });
+    </script>
+
+  </body>
+</html>
