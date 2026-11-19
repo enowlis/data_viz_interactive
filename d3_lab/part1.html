@@ -47,10 +47,21 @@
 
         // Step 1: Create a Linear Scale function to map population to SVG units
         // See https://d3js.org/d3-scale/linear#_linear
+        const scale = d3.scaleLinear([0, 10], [2, 198]);
 
         // note: for-of is akin to a Python for-in loop
-        for (let city of cities) {
+        for (const [i, city] of cities.entries()) {
           // Step 2: append a rect & text element for each one
+          div10.append("rect")
+            .attr("y", 20 * i)
+            .attr("width", scale(city.population / 1000000))
+            .attr("height", "15");
+
+          div10.append("text")
+            .attr("y", (20 * i) + 10)
+            .style("fill", "white")
+            .style("font-size", "6px")
+            .text(city.city)
         }
       </script>
     </section>
@@ -88,7 +99,21 @@
           .attr("viewBox", "0 0 200 100");
 
         // WRITE SOLUTION TO 1.1 BELOW
-        d3.selectAll("rect");
+        div11.selectAll("rect")
+          .data(cities)
+          .join("rect")
+          .attr("y", (_, i) => 20 * i)
+          .attr("width", (d) => scale(d.population / 1000000))
+          .attr("height", "15");
+
+        div11.selectAll("text")
+          .data(cities)
+          .join("text")
+          .attr("y", (_, i) => (20 * i) + 10)
+          .style("fill", "white")
+          .style("font-size", "6px")
+          .text(d => d.city)
+
       </script>
     </section>
 
@@ -112,7 +137,33 @@
           .attr("viewBox", "0 0 200 100");
 
         // WRITE SOLUTION TO 1.2 BELOW
-        // (you can copy/paste 1.1 to start this one)
+        div12.selectAll("rect")
+          .data(cities)
+          .join("rect")
+          .attr("y", (_, i) => 17 * i)
+          .attr("width", (d) => scale(d.population / 1000000))
+          .attr("height", "10");
+
+        div12.selectAll("text")
+          .data(cities)
+          .join("text")
+          .attr("y", (_, i) => (17 * i) + 8)
+          .style("fill", "white")
+          .style("font-size", "6px")
+          .text(d => d.city)
+
+        div12.append("g")
+          .attr("transform", "translate(0,80)")
+          .style("font-size", "5px")
+          .call(d3.axisBottom(scale));
+
+        div12.append("text")
+          .attr("text-anchor", "middle")
+          .attr("x", 100)
+          .attr("y", 98)
+          .style("font-size", "5px")
+          .text("Population of North American Cities (millions)");
+
       </script>
     </section>
 
