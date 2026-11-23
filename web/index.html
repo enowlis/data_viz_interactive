@@ -1,9 +1,8 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
   <head>
     <meta charset="utf-8" />
     <style>
-      /* style for tooltip as well as the base map container */
       .tooltip {
         position: absolute;
         padding: 8px;
@@ -19,168 +18,248 @@
         max-width: 1000px;
         margin: 0 auto;
       }
+      #slider { width: 600px; display: block; }
     </style>
-  </head>
-  <body>
-    <div class="container">
-      <div id="map"></div>
-    </div>
-    <div class="container">
-      <div id="region_bar"></div>
-    </div>
-
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://unpkg.com/topojson@3"></script>
-    <script>
-      const width = 800;
-      const height = 600;
-      const svg = d3
-        .select("#map")
-        .append("svg")
-        .attr("viewBox", [0, 0, width, height])
-        .attr("width", width)
-        .attr("height", height);
+  </head>
+<body>
+<select id="indicator-select"></select>
+<input type="range" id="slider">
+<svg id="map"></svg>
+<svg id="region_bar"></svg>
+<script>
+    /* Constants */
+    const width = 800, height = 600;
+    const legendWidth = 200, legendHeight = 15;
+    const FIRST_YEAR = 2000, LAST_YEAR = 2023;
 
-      const svg_bar = d3
-        .select("#region_bar")
-        .append("svg")
-        .attr("viewBox", [0, 0, width, height])
-        .attr("width", width)
-        .attr("height", height);
+    /* Global Map Constants */
+    const projection = d3
+        .geoNaturalEarth1()
+        .center([-30, 0])
+        .scale(150)
+        .translate([width / 2, height / 2]);
+    const path = d3.geoPath().projection(projection);
 
-      // d3 tooltip pattern: create a placeholder div which will be
-      // hidden at first & revealed/moved as needed
-      const tooltip = d3
+    /* Global Tooltip Constants */
+    const tooltip = d3
         .select("body")
         .append("div")
         .attr("class", "tooltip")
         .style("opacity", 0);
 
-      // set up projection
-      const projection = d3
-        .geoNaturalEarth1()
-        .center([-30, 0])
-        .scale(150)
-        .translate([width / 2, height / 2]);
-      const path = d3.geoPath().projection(projection);
-
-      let globalData = null;
-
-      // load data
-      Promise.all([
-        d3.json(
-        // DEMO change to 110m/10m
-        "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json",
-        ),
-        d3.json("../data/compiled_tourism_data.json")
-      ]).then(([map_data, value_data]) => {
-        // using topojson 3rd party library to convert to GeoJSON which D3 understands
-        const geojson = topojson.feature(map_data, map_data.objects.countries);
-
-        // Selected indicator and year
-        const selectedIndicator = "EMPL_TOTL_TOTL_TOTL_TOTL_PRSN";
-        const selectedYear = 2019;
-
-        // Filter observations
-        const filteredData = value_data.filter(d =>
-            d.indicator_code === selectedIndicator &&
-            d.year === selectedYear
+    /* Helper Functions */
+    function create_fill_color(data) {
+        const [minValue, maxValue] = d3.extent(
+            data,
+            d => +d.value
         );
 
-        const [minValue, maxValue] = d3.extent(
-            filteredData,
-            d => +d.value
-            );
-
-        // Group values by region and sum them
-        const regionData = Array.from(
-            d3.rollup(
-                filteredData,
-                v => d3.sum(v, d => +d.value),
-                d => d.region
-            ),
-            ([region, total]) => ({
-                region: region,
-                total: total
-            })
-            ).sort((a, b) => b.total - a.total);
-
-        // color function used for choropleth
         const colorScale = d3
             .scaleSequential()
             .domain([minValue, maxValue])
             .interpolator(d3.interpolateViridis);
 
-        // Create country-value lookup
+        return colorScale;
+    }
+
+    function legend_set_up(data) {
+        const [minValue, maxValue] = d3.extent(
+            data,
+            d => +d.value
+        );
+
+        // Create legend scale
+        const legendScale = d3
+            .scaleLinear()
+            .domain([minValue, maxValue])
+            .range([0, legendWidth]);
+
+        // Create legend axis
+        const legendAxis = d3
+            .axisBottom(legendScale)
+            .ticks(5)
+            .tickFormat(d3.format(",.0f"));
+
+        return legendAxis
+    }
+
+    function region_counts(data) {
+        return Array.from(
+            d3.rollup(
+                data,
+                v => d3.sum(v, d => +d.value),
+                d => d.region
+            ),
+            ([region, total]) => ({
+                region,
+                total
+            })
+        ).sort((a, b) => b.total - a.total);
+    }
+
+    /* Function to Draw Map */
+    function draw_map(data, indicator, year) {
+        // Filter observations
+        const filteredData = data
+            .filter(d => d.indicator_code === indicator &&
+                         d.year === year
+        );
+
+        const [minValue, maxValue] = d3.extent(
+            filteredData,
+            d => +d.value
+        );
+
+        // Create country to value lookup
         const countryValues = new Map(
             filteredData.map(d => [
-            d.reporter_area_label,
-            d.value
+                d.reporter_area_label,
+                +d.value
             ])
         );
 
-        geojson.features.forEach(d => {
-        d.properties.value = countryValues.get(d.properties.name);
+        // Attach values to GeoJSON features
+        countriesData.forEach(d => {
+            d.properties.value =
+                countryValues.get(d.properties.name);
         });
 
-        // entire map render happens after data is loaded, in the then() function
-        const countries_data = geojson.features.filter(
-          (d) => d.properties.value !== undefined,
+        // Build chart
+        const svg_map = d3.select("#map").attr("viewBox", [0, 0, width, height]).attr("width", width).attr("height", height);
+        const fill_colors = create_fill_color(filteredData);
+        const legend_axis = legend_set_up(filteredData);
+
+        svg_map.selectAll("*").remove();
+        svg_map.selectAll("path")
+        .data(countriesData) //filteredData, d => d.state
+        .join("path")
+            .attr("d", path)
+            .attr("fill", d =>
+                d.properties.value != null
+                ? fill_colors(d.properties.value)
+                : "#ccc"
+            )
+            .attr("stroke", "white")
+            .attr("stroke-width", 0.5)
+
+            // Tooltip functionality
+            .on("mouseover", function(event, d) {
+                tooltip.transition()
+                    .duration(200)
+                    .style("opacity", 0.9);
+
+                tooltip.html(`
+                    <strong>${d.properties.name}</strong><br/>
+                    Value: ${d.properties.value ?? "No data"}
+                `)
+                .style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY - 28) + "px");
+            })
+
+            .on("mouseout", function() {
+                tooltip.transition()
+                    .duration(500)
+                    .style("opacity", 0);
+            });
+
+        // Legend
+        // Position legend
+        const legend = svg_map
+            .append("g")
+            .attr(
+                "transform",
+                `translate(${width - legendWidth - 40}, ${height - 60})`
+            );
+
+        // Create gradient
+        const defs = svg_map.append("defs");
+
+        const gradient = defs
+            .append("linearGradient")
+            .attr("id", "legend-gradient")
+            .attr("x1", "0%")
+            .attr("x2", "100%")
+            .attr("y1", "0%")
+            .attr("y2", "0%");
+
+        // Add gradient stops
+        const stops = d3.range(0, 1.01, 0.1);
+
+        stops.forEach(stop => {
+            gradient
+                .append("stop")
+                .attr("offset", `${stop * 100}%`)
+                .attr("stop-color", fill_colors(
+                    minValue + stop * (maxValue - minValue)
+                ));
+        });
+
+        // Draw gradient rectangle
+        legend
+            .append("rect")
+            .attr("width", legendWidth)
+            .attr("height", legendHeight)
+            .style("fill", "url(#legend-gradient)");
+
+        // Draw axis
+        legend
+            .append("g")
+            .attr("transform", `translate(0, ${legendHeight})`)
+            .call(legend_axis);
+
+        // Legend title
+        legend
+            .append("text")
+            .attr("x", legendWidth / 2)
+            .attr("y", -8)
+            .attr("text-anchor", "middle")
+            .style("font-size", "12px")
+            .text("Indicator value");
+
+        // Year Label
+        svg_map.selectAll("text.year").data([SELECTED_YEAR]).join("text")
+            .attr("class", "year").attr("x", width/2).attr("y", 30).text(d => d);
+    }
+
+    /* Function to Draw Bar */
+    function draw_bar(data, indicator, year) {
+        // Filter observations
+        const filteredData = data
+            .filter(d => d.indicator_code === indicator &&
+                         d.year === year
         );
 
-        console.log(countries_data);
-
-        svg
-          .selectAll("path")
-          .data(countries_data)
-          .join("path")
-          .attr("d", path)
-          .attr("fill", (d) => {
-            const score = d.properties.value;
-            return score != null ? colorScale(score) : "#ccc";
-          })
-          .attr("stroke", "white")
-          .attr("stroke-width", 0.5)
-          .on("mouseover", function (event, d) {
-            tooltip.transition().duration(200).style("opacity", 0.9);
-            tooltip
-              .html(
-                `
-              <strong>${d.properties.name}</strong><br/>
-              ${selectedIndicator}: ${d.properties.value}
-            `,
-              )
-              .style("left", event.pageX + 10 + "px")
-              .style("top", event.pageY - 28 + "px");
-          })
-          .on("mouseout", function () {
-            tooltip.transition().duration(500).style("opacity", 0);
-          });
+        // Build chart
+        const svg_bar = d3.select("#region_bar").attr("viewBox", [0, 0, width, height]).attr("width", width).attr("height", height);
+        const region_data = region_counts(filteredData);
 
         // X scale (total values)
         const xScale = d3
             .scaleLinear()
-            .domain([0, d3.max(regionData, d => d.total)])
+            .domain([0, d3.max(region_data, d => d.total)])
             .nice()
             .range([150, width]);
 
         // Y scale (regions)
         const yScale = d3
             .scaleBand()
-            .domain(regionData.map(d => d.region))
+            .domain(region_data.map(d => d.region))
             .range([0, height])
             .padding(0.2);
 
         // Draw bars
-        svg_bar
-            .selectAll(".bar")
-            .data(regionData)
+        svg_bar.selectAll("*").remove();
+        svg_bar.selectAll(".bar")
+            .data(region_data)
             .join("rect")
             .attr("class", "bar")
             .attr("x", xScale(0))
             .attr("y", d => yScale(d.region))
             .attr("width", d => xScale(d.total) - xScale(0))
-            .attr("height", yScale.bandwidth());
+            .attr("height", yScale.bandwidth())
+            .attr("fill", "steelblue");
 
         // Region labels
         svg_bar
@@ -189,68 +268,78 @@
             .call(d3.axisLeft(yScale));
 
         // Data values
-        svg_bar
-            .selectAll(".bar-label")
-            .data(regionData)
+        svg_bar.selectAll(".bar-label")
+            .data(region_data)
             .join("text")
             .attr("class", "bar-label")
             .attr("x", d => xScale(d.total) + 5)
             .attr("y", d => yScale(d.region) + yScale.bandwidth() / 2)
             .attr("dy", "0.35em")
             .text(d => d3.format(",.0f")(d.total));
+    }
 
-        // example of a legend, not related to map topics
-        const legendWidth = 200;
-        const legendHeight = 20;
-        const legendScale = d3
-          .scaleLinear()
-          .domain([minValue, maxValue])
-          .range([0, legendWidth]);
+    /* Load Data and Draw Map */
+    let SELECTED_YEAR = 2019;
+    let SELECTED_INDICATOR = "EMPL_TOTL_TOTL_TOTL_TOTL_PRSN";
+    let tourismData = null;
+    let countriesData = null;
 
-        const legendAxis = d3
-          .axisBottom(legendScale)
-          .ticks(8)
-          .tickFormat((d) => d);
+    function update() {
+        draw_map(tourismData, SELECTED_INDICATOR, SELECTED_YEAR);
+        draw_bar(tourismData, SELECTED_INDICATOR, SELECTED_YEAR);
 
-        const legend = svg
-          .append("g")
-          .attr(
-            "transform",
-            `translate(${width - legendWidth - 20}, ${height - 50})`,
-          );
+        d3.select("#slider");
+    }
 
-        const defs = svg.append("defs");
-        const gradient = defs
-          .append("linearGradient")
-          .attr("id", "legend-gradient")
-          .attr("x1", "0%")
-          .attr("x2", "100%")
-          .attr("y1", "0%")
-          .attr("y2", "0%");
+    Promise.all([
+    d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json"),
+    d3.json("data/compiled_tourism_data.json")
+    ]).then(([map_data, value_data]) => {
+        countriesData = topojson.feature(
+            map_data,
+            map_data.objects.countries
+            ).features;
 
-        // Add gradient stops
-        const stops = d3.range(0, 8);
+        tourismData = value_data;
 
-        stops.forEach((stop, i) => {
-          const value = minValue + (i / 10) * (maxValue - minValue);
-          gradient
-            .append("stop")
-            .attr("offset", `${i * 10}%`)
-            .attr("stop-color", colorScale(value));
-        });
+        const indicators = Array.from(
+            d3.rollup(
+                tourismData,
+                v => v[0].indicator_label,
+                d => d.indicator_code
+            ),
+            ([code, label]) => ({
+                code,
+                label
+            })
+        ).sort((a, b) => a.label.localeCompare(b.label));
 
-        legend
-          .append("rect")
-          .attr("width", legendWidth)
-          .attr("height", legendHeight)
-          .style("fill", "url(#legend-gradient)");
+        d3.select("#slider")
+            .attr("min", FIRST_YEAR)
+            .attr("max", LAST_YEAR)
+            .property("value", SELECTED_YEAR)
+            .on("input", function() {
+                SELECTED_YEAR = +this.value;
+                update();
+            })
 
-        legend
-          .append("g")
-          .attr("transform", `translate(0, ${legendHeight})`)
-          .call(legendAxis);
-      });
-    </script>
+        d3.select("#indicator-select")
+            .selectAll("option")
+            .data(indicators)
+            .join("option")
+                .attr("value", d => d.code)
+                .text(d => d.label)
+                .property("selected", d => d.code === SELECTED_INDICATOR);
 
-  </body>
+        d3.select("#indicator-select")
+            .on("change", function() {
+                SELECTED_INDICATOR = this.value;
+                update();
+                });
+
+        update();
+    });
+
+</script>
+</body>
 </html>

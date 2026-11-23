@@ -2,6 +2,7 @@ import pathlib
 import pandas as pd
 
 DATA_FILEPATH = "/home/elies/data_viz_interactive/data"
+OUTPUT_FILEPATH = "/home/elies/data_viz_interactive/web/data"
 
 def read_in_data():
     tourism_folder = pathlib.Path(f"{DATA_FILEPATH}/UN_tourism_data")
@@ -33,8 +34,58 @@ def add_regions_and_geometry(data):
 
     return pd.merge(data, to_add, on = "reporter_area_label", how = "left")
 
+def rename_countries(data):
+    data["reporter_area_label"] = data["reporter_area_label"].replace(
+        {"Antigua and Barbuda" : "Antigua and Barb.",
+            "Bolivia (Plurinational State of)" : "Bolivia",
+            "Bosnia and Herzegovina" : "Bosnia and Herz.",
+            "British Virgin Islands" : "British Virgin Is.",
+            "Brunei Darussalam" : "Brunei",
+            "Cayman Islands" : "Cayman Is.",
+            "Central African Republic" : "Central African Rep.",
+            "Cook Islands" : "Cook Is.",
+            "CÃ´te dâ€™Ivoire" : "Côte d'Ivoire",
+            "CuraÃ§ao" : "Curaçao",
+            "Democratic Republic of the Congo" : "Dem. Rep. Congo",
+            "Dominican Republic" : "Dominican Rep.",
+            "Equatorial Guinea" : "Eq. Guinea",
+            "French Polynesia" : "Fr. Polynesia",
+            "China, Hong Kong Special Administrative Region" : "Hong Kong",
+            "Iran (Islamic Republic of)" : "Iran",
+            "Lao People's Democratic Republic" : "Laos",
+            "China, Macao Special Administrative Region" : "Macao",
+            "North Macedonia" : "Macedonia",
+            "Marshall Islands" : "Marshall Is.",
+            "Micronesia (Federated States of)" : "Micronesia",
+            "Republic of Moldova" : "Moldova",
+            "Netherlands (Kingdom of the)" : "Netherlands",
+            "Northern Mariana Islands" : "N. Mariana Is.",
+            "State of Palestine" : "Palestine",
+            "Russian Federation" : "Russia",
+            "South Sudan" : "S. Sudan",
+            "Sao Tome and Principe" : "São Tomé and Principe",
+            "Sint Maarten (Dutch part)" : "Sint Maarten",
+            "Solomon Islands" : "Solomon Is.",
+            "Republic of Korea" : "South Korea",
+            "Saint Kitts and Nevis" : "St. Kitts and Nevis",
+            "Saint Vincent and the Grenadines" : "St. Vin. and Gren.",
+            "Syrian Arab Republic" : "Syria",
+            "Taiwan Province of China" : "Taiwan",
+            "United Republic of Tanzania" : "Tanzania",
+            "TÃ¼rkiye" : "Turkey",
+            "Turks and Caicos Islands" : "Turks and Caicos Is.",
+            "United States Virgin Islands" : "U.S. Virgin Is.",
+            "United Kingdom of Great Britain and Northern Ireland" : "United Kingdom",
+            "Venezuela (Bolivarian Republic of)" : "Venezuela",
+            "Viet Nam" : "Vietnam",
+            "Wallis and Futuna Islands" : "Wallis and Futuna Is."
+        }
+    )
+
+    return data
+
 if __name__ == "__main__":
     compiled_data = add_regions_and_geometry(read_in_data())
-    compiled_data.to_csv(f"{DATA_FILEPATH}/compiled_tourism_data.csv")
-    compiled_data.to_json(f"{DATA_FILEPATH}/compiled_tourism_data.json",
+    compiled_data = rename_countries(compiled_data)
+    compiled_data.to_json(f"{OUTPUT_FILEPATH}/compiled_tourism_data.json",
                           orient="records")
