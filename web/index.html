@@ -19,6 +19,13 @@
         margin: 0 auto;
       }
       #slider { width: 600px; display: block; }
+      #year-label { text-align: center; font-family: sans-serif; }
+      #year-label #year-text { font-size: 24px; font-weight: bold; }
+      #year-label #indicator-text { font-size: 14px; }
+      #charts { display: flex; align-items: flex-start; }
+      #map { flex: 0 0 auto; margin-left: -60px; }
+      #region_bar { flex: 1 1 0; min-width: 0; max-width: 800px; height: auto; }
+      #options { display: flex; flex-wrap: wrap; justify-content: space-evenly; gap: 8px 16px; }
     </style>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://unpkg.com/topojson@3"></script>
@@ -26,13 +33,54 @@
 <body>
 <select id="indicator-select"></select>
 <input type="range" id="slider">
-<svg id="map"></svg>
-<svg id="region_bar"></svg>
+<div id="year-label">
+  <div id="year-text"></div>
+  <div id="indicator-text"></div>
+</div>
+<div id="charts">
+  <svg id="map"></svg>
+  <svg id="region_bar"></svg>
+</div>
+<div id="options"></div>
 <script>
     /* Constants */
     const width = 800, height = 600;
     const legendWidth = 200, legendHeight = 15;
     const FIRST_YEAR = 2000, LAST_YEAR = 2023;
+
+    /* Indicator categories and their options */
+    const CATEGORIES = {
+        "Employment": [
+            {label: "Total", code: "EMPL_TOTL_TOTL_TOTL_TOTL_PRSN"},
+            {label: "Accommodation", code: "EMPL_ACCM_HOTL_TOTL_TOTL_PRSN"},
+            {label: "Food and beverage serving", code: "EMPL_FOOD_TOTL_TOTL_TOTL_PRSN"},
+            {label: "Travel Agencies", code: "EMPL_AGCY_TOTL_TOTL_TOTL_PRSN"},
+            {label: "Air", code: "EMPL_AIRT_TOTL_TOTL_TOTL_PRSN"},
+            {label: "Cultural activities", code: "EMPL_CULT_TOTL_TOTL_TOTL_PRSN"},
+            {label: "Railway", code: "EMPL_RAIL_TOTL_TOTL_TOTL_PRSN"},
+            {label: "Road", code: "EMPL_ROAD_TOTL_TOTL_TOTL_PRSN"},
+            {label: "Sports and recreational activities", code: "EMPL_SPRT_TOTL_TOTL_TOTL_PRSN"},
+            {label: "Transport equipment rental", code: "EMPL_EQUP_TOTL_TOTL_TOTL_PRSN"},
+            {label: "Water passenger transport", code: "EMPL_WATR_TOTL_TOTL_TOTL_PRSN"}
+        ],
+        "Expenditures": [
+            {label: "Inbound", code: "INBD_EXPD_BPAY_TOTL_VSTR"},
+            {label: "Outbound", code: "OUTB_EXPD_BPAY_TOTL_VSTR"}
+        ],
+        "Trips": [
+            {label: "Inbound", code: "INBD_TRIP_TOTL_TOTL_VSTR"},
+            {label: "Outbound", code: "OUTB_TRIP_TOTL_TOTL_VSTR"},
+            {label: "Domestic", code: "DOMC_TRIP_TOTL_TOTL_VSTR"}
+        ],
+        "Accommodations": [
+            {label: "Capacity (rooms)", code: "CPTY_ACCM_HOTL_ROOM"},
+            {label: "Capacity (establishments)", code: "CPTY_ACCM_HOTL_ESTB"},
+            {label: "Inbound (guests)", code: "INBD_ACCM_HOTL_GUES"},
+            {label: "Inbound (overnights)", code: "INBD_ACCM_HOTL_NGHT"},
+            {label: "Domestic (guests)", code: "DOMC_ACCM_HOTL_GUES"},
+            {label: "Domestic (overnights)", code: "DOMC_ACCM_HOTL_NGHT"}
+        ]
+    };
 
     /* Global Map Constants */
     const projection = d3
@@ -217,10 +265,6 @@
             .attr("text-anchor", "middle")
             .style("font-size", "12px")
             .text("Indicator value");
-
-        // Year Label
-        svg_map.selectAll("text.year").data([SELECTED_YEAR]).join("text")
-            .attr("class", "year").attr("x", width/2).attr("y", 30).text(d => d);
     }
 
     /* Function to Draw Bar */
@@ -280,13 +324,41 @@
 
     /* Load Data and Draw Map */
     let SELECTED_YEAR = 2019;
-    let SELECTED_INDICATOR = "EMPL_TOTL_TOTL_TOTL_TOTL_PRSN";
+    let SELECTED_CATEGORY = "Employment";
+    let SELECTED_INDICATOR = CATEGORIES[SELECTED_CATEGORY][0].code;
     let tourismData = null;
     let countriesData = null;
+
+    function render_options() {
+        const container = d3.select("#options");
+        container.selectAll("*").remove();
+
+        const labels = container
+            .selectAll("label")
+            .data(CATEGORIES[SELECTED_CATEGORY])
+            .join("label")
+            .style("display", "block");
+
+        labels.append("input")
+            .attr("type", "radio")
+            .attr("name", "indicator")
+            .attr("value", d => d.code)
+            .property("checked", d => d.code === SELECTED_INDICATOR)
+            .on("change", function() {
+                SELECTED_INDICATOR = this.value;
+                update();
+            });
+
+        labels.append("span").text(d => " " + d.label);
+    }
 
     function update() {
         draw_map(tourismData, SELECTED_INDICATOR, SELECTED_YEAR);
         draw_bar(tourismData, SELECTED_INDICATOR, SELECTED_YEAR);
+
+        d3.select("#year-text").text(SELECTED_YEAR);
+        const indicatorRow = tourismData.find(d => d.indicator_code === SELECTED_INDICATOR);
+        d3.select("#indicator-text").text(indicatorRow ? indicatorRow.indicator_label : "");
 
         d3.select("#slider");
     }
@@ -302,18 +374,6 @@
 
         tourismData = value_data;
 
-        const indicators = Array.from(
-            d3.rollup(
-                tourismData,
-                v => v[0].indicator_label,
-                d => d.indicator_code
-            ),
-            ([code, label]) => ({
-                code,
-                label
-            })
-        ).sort((a, b) => a.label.localeCompare(b.label));
-
         d3.select("#slider")
             .attr("min", FIRST_YEAR)
             .attr("max", LAST_YEAR)
@@ -325,18 +385,21 @@
 
         d3.select("#indicator-select")
             .selectAll("option")
-            .data(indicators)
+            .data(Object.keys(CATEGORIES))
             .join("option")
-                .attr("value", d => d.code)
-                .text(d => d.label)
-                .property("selected", d => d.code === SELECTED_INDICATOR);
+                .attr("value", d => d)
+                .text(d => d)
+                .property("selected", d => d === SELECTED_CATEGORY);
 
         d3.select("#indicator-select")
             .on("change", function() {
-                SELECTED_INDICATOR = this.value;
+                SELECTED_CATEGORY = this.value;
+                SELECTED_INDICATOR = CATEGORIES[SELECTED_CATEGORY][0].code;
+                render_options();
                 update();
-                });
+            });
 
+        render_options();
         update();
     });
 
